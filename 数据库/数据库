@@ -1,0 +1,1406 @@
+# 数据库
+
+<img src="C:/Users/zhouk/AppData/Roaming/Typora/typora-user-images/image-20220704193753273.png" alt="image-20220704193753273" style="zoom:67%;" />
+
+数据库【DataBase，DB】，按照一定格式存储数据的一些文件的组合
+
+数据库管理系统【DataBaseManagement，DBMS】，专门用来管理数据库的，对数据库进行增删改查
+
+SQL【结构化查询语言】，编写SQL语句，DBMS负责执行SQL语句，完成数据库的操作
+
+DBMS执行 ==》SQL操作 ==》DB
+
+创建用户，更改密码
+
+初始密码为空，输入密码时直接回车就行
+
+以“;”终止
+
+SQL语句不区分大小写
+
+MySQL服务名称**mysql3306**
+
+```mysql
+net start mysql3306
+mysql -u root -p
+```
+
+VScode（作为客户端）连接MySQL
+
+```mysql
+MYSQL：ER_NOT_SUPPORTED_AUTH_MODE:Client does not support authentication protocol
+//原因：登录数据库的客户端跟mysql8.0不兼容了，mysql8.0密码认证采用了新的密码格式
+```
+
+解决办法：将mysql用户使用的登录密码加密规则（caching_sha2_password）还原成  mysql_native_password客户端即可登陆成功
+
+参考如下
+
+[(48条消息) ERROR 1396 (HY000): Operation ALTER USER failed for 'root'@'localhost'_蜗牛不会跑~的博客-CSDN博客](https://blog.csdn.net/weixin_39939012/article/details/103013022)
+
+在my.int配置文件中添加
+
+```mysql
+# 默认使用mysql_native_password插件认证
+default_authentication_plugin=mysql_native_password
+```
+
+配置完，重启服务即可
+
+表：
+
+- 行（row）：数据/记录
+- 列（column）：字段
+
+每一个字段都有：
+
+- 字段名：普通名字
+- 数据类型：字符串、数字、日期等
+- 约束：约束条件
+
+```mysql
+		DQL：
+			数据查询语言（凡是带有select关键字的都是查询语句）
+			select from where group by having order by limit
+		DML：
+			数据操作语言（凡是对表当中的数据进行增删改的都是DML）
+			insert delete update
+			insert 增
+			delete 删
+			update 改
+			这个主要是操作表中的数据data
+		DDL：
+			数据定义语言
+			凡是带有create、drop、alter的都是DDL
+			DDL主要操作的是表的结构。不是表中的数据
+			create：新建，等同于增
+			drop：删除
+			alter：修改
+			这个增删改和DML不同，这个主要是对表结构进行操作
+		TCL：
+			是事务控制语言
+			包括：
+				事务提交：commit;
+				事务回滚：rollback;
+		DCL：
+			是数据控制语言。
+			例如：授权grant、撤销权限revoke....
+```
+
+## DQL
+
+source执行sql脚本文件，当文件过大时，记事本打开直接死机
+
+```mysql
+mysql>  create database tmp;
+Query OK, 1 row affected (0.01 sec)
+
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| test               |
+| tmp                |
++--------------------+
+5 rows in set (0.01 sec)
+
+mysql> use tmp;
+Database changed
+mysql> show tables;
+Empty set (0.01 sec)
+
+mysql> select database();
++-------------+
+| database()  |
++-------------+
+|     tmp     |
++-------------+
+1 row in set (0.00 sec)
+
+mysql> source D:\Mysql\source\document\tmp.sql
+
+mysql> show tables;
++-----------------------+
+| Tables_in_t |
++-----------------------+
+| dept                  |
+| emp                   |
+| salgrade              |
++-----------------------+
+3 rows in set (0.00 sec)
+
+mysql> select * from emp;
++-------+--------+-----------+------+------------+---------+---------+--------+
+| EMPNO | ENAME  | JOB       | MGR  | HIREDATE   | SAL     | COMM    | DEPTNO |
++-------+--------+-----------+------+------------+---------+---------+--------+
+|  7369 | SMITH  | CLERK     | 7902 | 1980-12-17 |  800.00 |    NULL |     20 |
+|  7499 | ALLEN  | SALESMAN  | 7698 | 1981-02-20 | 1600.00 |  300.00 |     30 |
+|  7521 | WARD   | SALESMAN  | 7698 | 1981-02-22 | 1250.00 |  500.00 |     30 |
+|  7566 | JONES  | MANAGER   | 7839 | 1981-04-02 | 2975.00 |    NULL |     20 |
+|  7654 | MARTIN | SALESMAN  | 7698 | 1981-09-28 | 1250.00 | 1400.00 |     30 |
+|  7698 | BLAKE  | MANAGER   | 7839 | 1981-05-01 | 2850.00 |    NULL |     30 |
+|  7782 | CLARK  | MANAGER   | 7839 | 1981-06-09 | 2450.00 |    NULL |     10 |
+|  7788 | SCOTT  | ANALYST   | 7566 | 1987-04-19 | 3000.00 |    NULL |     20 |
+|  7839 | KING   | PRESIDENT | NULL | 1981-11-17 | 5000.00 |    NULL |     10 |
+|  7844 | TURNER | SALESMAN  | 7698 | 1981-09-08 | 1500.00 |    0.00 |     30 |
+|  7876 | ADAMS  | CLERK     | 7788 | 1987-05-23 | 1100.00 |    NULL |     20 |
+|  7900 | JAMES  | CLERK     | 7698 | 1981-12-03 |  950.00 |    NULL |     30 |
+|  7902 | FORD   | ANALYST   | 7566 | 1981-12-03 | 3000.00 |    NULL |     20 |
+|  7934 | MILLER | CLERK     | 7782 | 1982-01-23 | 1300.00 |    NULL |     10 |
++-------+--------+-----------+------+------------+---------+---------+--------+
+14 rows in set (0.00 sec)
+```
+
+"*"为一整行的数据记录
+
+```mysql
+//查询【查询不不会改变表的内容】
+select 字段名 from 表名 //多个字段名中间加逗号
+select * from 表名     //查询所有字段
+select 字段名 字段别名 from 表名 //起别名，中间加空格
+select 数学表达式 from 表名 //字段可以用数学表达式
+select 数学表达式 from 表名 where 条件 //条件查询
+select ename,sal from emp  //找出工资在1500到3000之间的员工信息，要求按照薪资降序排列
+    -> where sal between 1500 and 3000 
+    -> order by sal desc;
+//不等号 <> !=
+//%匹配任意个字符，_只
+//查询NULL 方式 is NULL（不可以用 =）
+select 字段 from 表名 order by 字段名 //排序，默认升序
+select 字段 from 表名 order by 字段名 asc //排序，升序
+select 字段 from 表名 order by 字段名 desc //排序，降序
+select 字段1，字段2 from 表名 order by 字段1 asc，字段2 asc //按照字段1排序，字段1相同按照字段2
+```
+
+### 处理函数
+
+#### 单行处理函数
+
+单行处理函数【数据处理函数】：一个输入对应一个输出
+
+```mysql
+select lower(ename) as ename from emp;//lower 转换小写
+select upper(name) as name from t_student;//upper 转换大写
+select substr(ename, 1, 1) from emp;//substr 取子串
+select length(ename) enamelength from emp;//length 取长度
+select round(1236.567, 0) from emp; //保留整数位
+select rand() from emp; //rand() 生成随机数
+ifnull(comm, 0)); //if(comm == NULL) comm = 0
+//case语句 job为MANAGER，工资上调10%；job为SALESMAN，工资上调50%
+select ename,job, sal as oldsal,
+	-> case job when 'MANAGER' then sal*1.1 when 'SALESMAN' then sal*1.5 else sal end
+	-> as newsal 
+	-> from emp;
+```
+
+#### 多行处理函数
+
+多行处理函数【分组函数】：多个输入对应一个输出
+
+**使用前必须分组，不分组默认整张表是一组数据**
+
+自动忽略NULL
+
+```mysql
+select max(sal) from emp;     //找出最高工资
+select min(sal) from emp;	  //找出最低工资
+select sum(sal) from emp;	  //计算工资和
+select avg(sal) from emp;  	  //计算平均工资
+select count(ename) from emp; //计算员工数量
+```
+
+```mysql
+mysql> select count(*) from emp;
++----------+
+| count(*) |
++----------+
+|       14 |
++----------+
+1 row in set (0.01 sec)
+
+mysql> select count(comm) from emp;
++-------------+
+| count(comm) |
++-------------+
+|           4 |
++-------------+
+1 row in set (0.00 sec)
+```
+
+分组查询 group by
+
+默认是整张表分成一组
+
+执行顺序 from -> where ->group by -> select -> order by
+
+```mysql
+//求每个工作岗位的工资和
+mysql> select job,sum(sal) from emp group by job;
++-----------+----------+
+| job       | sum(sal) |
++-----------+----------+
+| CLERK     |  4150.00 |
+| SALESMAN  |  5600.00 |
+| MANAGER   |  8275.00 |
+| ANALYST   |  6000.00 |
+| PRESIDENT |  5000.00 |
++-----------+----------+
+5 rows in set (0.00 sec)
+```
+
+在一条select语句当中，如果有group by语句的话，select后面只能跟：参加分组的字段，以及分组函数。其它的一律不能跟
+
+```mysql
+//找出每个部门的最高薪资
+mysql> select deptno,max(sal) from emp group by deptno;
++--------+----------+
+| deptno | max(sal) |
++--------+----------+
+|     20 |  3000.00 |
+|     30 |  2850.00 |
+|     10 |  5000.00 |
++--------+----------+
+3 rows in set (0.00 sec)
+```
+
+```mysql
+//找出“每个部门，不同工作岗位”的最高薪资
+mysql> select deptno,job,max(sal) from emp group by deptno,job order by deptno;
++--------+-----------+----------+
+| deptno | job       | max(sal) |
++--------+-----------+----------+
+|     10 | CLERK     |  1300.00 |
+|     10 | MANAGER   |  2450.00 |
+|     10 | PRESIDENT |  5000.00 |
+|     20 | ANALYST   |  3000.00 |
+|     20 | CLERK     |  1100.00 |
+|     20 | MANAGER   |  2975.00 |
+|     30 | CLERK     |   950.00 |
+|     30 | MANAGER   |  2850.00 |
+|     30 | SALESMAN  |  1600.00 |
++--------+-----------+----------+
+9 rows in set (0.00 sec)
+```
+
+having：对分组后的数据进行进一步过滤
+
+**执行顺序 from -> where ->group by -> having -> select -> order by（书写必须严格遵守）**
+
+找出每个岗位的平均薪资，要求显示平均薪资大于1500的，除MANAGER岗位之外，要求按照平均薪资降序排
+
+```mysql
+mysql> select job, avg(sal) from emp
+    -> where job != 'manager'
+    -> group by job
+    -> having avg(sal) > 1500
+    -> order by avg(sal);
++-----------+-------------+
+| job       | avg(sal)    |
++-----------+-------------+
+| PRESIDENT | 5000.000000 |
+| ANALYST   | 3000.000000 |
++-----------+-------------+
+2 rows in set (0.00 sec)
+```
+
+### 连接查询join
+
+多张表联合查询
+
+**必须带条件where，避免出现笛卡尔积现象【所有记录全部显示出来，并不是我们想要的，我们只要筛查一部分（两张表有关联的），所以必须带上条件】**
+
+比如查询emp表和dept表，共有14 * 4 = 56条记录，如果不加条件就全部显示出来
+
+**加上条件where，匹配的次数并没有减少，只是显示筛查出的那部分**
+
+要起别名，使用起来更加方便
+
+尽量降低表的连接的次数
+
+#### 内连接
+
+##### 等值查询
+
+查询每个员工所在部门名称，显示员工名和部门名？
+
+```mysql
+mysql> select e.ename,d.dname from emp e,dept d
+    -> where e.deptno = d.deptno;
++--------+------------+
+| ename  | dname      |
++--------+------------+
+| SMITH  | RESEARCH   |
+| ALLEN  | SALES      |
+| WARD   | SALES      |
+|……
+| MILLER | ACCOUNTING |
++--------+------------+
+14 rows in set (0.00 sec)
+```
+
+SQL92语法：
+	select e.ename,d.dname from emp e, dept d
+	where e.deptno = d.deptno;
+sql92的缺点：结构不清晰，表的连接条件，和后期进一步筛选的条件，都放到了where后面
+
+SQL99语法：
+
+```mysql
+select e.ename,d.dname 
+	from emp e 
+	join dept d
+	on e.deptno = d.deptno;
+```
+
+##### 菲等值查询
+
+条件在一个范围内~
+
+找出每个员工的薪资等级，要求显示员工名、薪资、薪资等级？
+
+```mysql
+mysql> select e.ename,e.sal,s.grade
+    -> from emp e
+    -> join salgrade s
+    -> on e.sal between s.losal and s.hisal;
++--------+---------+-------+
+| ename  | sal     | grade |
++--------+---------+-------+
+| SMITH  |  800.00 |     1 |
+| ALLEN  | 1600.00 |     3 |
+|……
+| FORD   | 3000.00 |     4 |
+| MILLER | 1300.00 |     2 |
++--------+---------+-------+
+14 rows in set (0.00 sec)
+```
+
+##### 自查询
+
+一张表看成两张表，一张表起两个别名
+
+查询员工的上级领导，要求显示员工名和对应的领导名
+
+```mysql
+mysql>  select a.ename,b.ename
+    -> from emp a
+    -> join emp b
+    -> on a.mgr = b.empno;
++--------+-------+
+| ename  | ename |
++--------+-------+
+| SMITH  | FORD  |
+|……
+| ADAMS  | SCOTT |
+| JAMES  | BLAKE |
+| FORD   | JONES |
+| MILLER | CLARK |
++--------+-------+
+13 rows in set (0.00 sec)
+```
+
+#### 外连接join & on
+
+right代表什么：表示将join关键字右边的这张表看成主表，主要是为了将这张表的数据全部查询出来，捎带着关联查询左边的表。在外连接当中，两张表连接，产生了主次关系。也叫**右连接，右外连接**，同时也有**左连接**
+
+**内连接的表中无主次关系，只有匹配的上才显示**
+
+**right右边的、或者left左边的就是主表！**
+
+```mysql
+mysql> select e.ename,d.dname
+    -> from emp e
+    -> right join dept d
+    -> on e.deptno = d.deptno
+    -> ;
++--------+------------+
+| ename  | dname      |
++--------+------------+
+| CLARK  | ACCOUNTING |
+| KING   | ACCOUNTING |
+|……
+| MARTIN | SALES      |
+| BLAKE  | SALES      |
+| TURNER | SALES      |
+| JAMES  | SALES      |
+| NULL   | OPERATIONS |
++--------+------------+
+15 rows in set (0.00 sec)
+```
+
+最后一条在dept表中，而emp表中没有匹配的也显示出来
+
+练习：找出每个员工的部门名称以及工资等级，还有上级领导，要求显示员工名、领导名、部门名称、薪资等级
+
+此处上级领导时，必须用左连，KING没有上级领导
+
+```mysql
+mysql> select e.ename,d.dname,s.grade,l.ename
+    -> from emp e
+    -> join dept d on e.deptno = d.deptno
+    -> join salgrade s on  e.sal between s.losal and s.hisal
+    -> left join emp l on e.mgr = l.empno;
++--------+------------+-------+-------+
+| ename  | dname      | grade | ename |
++--------+------------+-------+-------+
+| SMITH  | RESEARCH   |     1 | FORD  |
+|……
+| SCOTT  | RESEARCH   |     4 | JONES |
+| KING   | ACCOUNTING |     5 | NULL  |
+| TURNER | SALES      |     3 | BLAKE |
+| MILLER | ACCOUNTING |     2 | CLARK |
++--------+------------+-------+-------+
+14 rows in set (0.00 sec)
+```
+
+### 子查询
+
+where子查询
+
+```mysql
+select ename,sal from emp where sal > (select min(sal) from emp);
+```
+
+from子查询
+
+```mysql
+select t.*,grade
+	from (select job,avg(sal) as avgsal from emp group by job) t
+	join salgrade s
+	on t.avgsal between s.losal and s.hisal;
++-----------+-------------+-------+
+| job       | avgsal      | grade |
++-----------+-------------+-------+
+| CLERK     | 1037.500000 |     1 |
+| SALESMAN  | 1400.000000 |     2 |
+| MANAGER   | 2758.333333 |     4 |
+| ANALYST   | 3000.000000 |     4 |
+| PRESIDENT | 5000.000000 |     5 |
++-----------+-------------+-------+
+5 rows in set (0.01 sec)
+```
+
+select子查询
+
+#### union合并查询
+
+union的效率要高一些。对于表连接来说，每连接一次新表，则匹配的次数满足笛卡尔积，成倍的翻。。。
+但是union可以减少匹配的次数。在减少匹配次数的情况下，还可以完成两个结果集的拼接。
+
+```mysql
+mysql> select ename,job from emp where job = 'CLERK'
+    -> union
+    -> select ename,job from emp where job = 'MANAGER';
++--------+---------+
+| ename  | job     |
++--------+---------+
+| SMITH  | CLERK   |
+| ADAMS  | CLERK   |
+| JAMES  | CLERK   |
+| MILLER | CLERK   |
+| JONES  | MANAGER |
+| BLAKE  | MANAGER |
+| CLARK  | MANAGER |
++--------+---------+
+7 rows in set (0.00 sec)
+```
+
+**union与join的区别？**
+
+union：合并两个或多个select语句的，减少匹配次数，要求列数与数据类型均相同
+
+join：连接是多个集合的交叉子集，满足条件相同的列得到的结果。根据使用的join类型，判断是内连、外连等
+
+#### limit
+
+limit：将查询结果集的一部分取出来，通常使用在分页查询当中
+
+提高用户体验，可以一页一页查看
+
+```mysql
+limit startIndex,length
+```
+
+从起始下标startIndex开始，查询length条记录
+
+注意：mysql当中limit在order by之后执行！！！！！！
+
+```mysql
+mysql> select ename,sal from emp
+    -> order by sal
+    -> limit 0,5;
++--------+---------+
+| ename  | sal     |
++--------+---------+
+| SMITH  |  800.00 |
+| JAMES  |  950.00 |
+| ADAMS  | 1100.00 |
+| WARD   | 1250.00 |
+| MARTIN | 1250.00 |
++--------+---------+
+5 rows in set (0.00 sec)
+```
+
+##### 分页公式
+
+pageNo：页码
+
+pageSize：每页显示的信息数目
+
+第pageNo页显示的信息数目为：
+
+```mysql
+limit (pageNo-1)*pageSize,pagesize
+```
+
+#### DQL总结
+
+执行顺序
+
+from、where、group by、having、select、order by、limit
+
+重点：多表联查、内外连接使用
+
+## DDL
+
+varchar(最长255)
+			可变长度的字符串
+			比较智能，节省空间。
+			会根据实际的数据长度动态分配空间。
+
+```mysql
+varchar(最长255)
+			可变长度的字符串
+			比较智能，节省空间
+			会根据实际的数据长度动态分配空间
+char(最长255)
+		定长字符串
+		不管实际的数据长度是多少
+		分配固定长度的空间去存储数据
+		使用不恰当的时候，可能会导致空间的浪费
+
+		优点：不需要动态分配空间，速度快
+		缺点：使用不当可能会导致空间的浪费
+
+		varchar和char我们应该怎么选择？
+			性别字段你选什么？因为性别是固定长度的字符串，所以选择char
+			姓名字段你选什么？每一个人的名字长度不同，所以选择varchar
+int(最长11)
+		数字中的整数型。等同于java的int
+
+bigint
+		数字中的长整型。等同于java中的long
+float	
+		单精度浮点型数据
+double
+		双精度浮点型数据
+date
+		短日期类型
+datetime
+		长日期类型
+clob
+		字符大对象
+		最多可以存储4G的字符串
+		比如：存储一篇文章，存储一个说明
+		超过255个字符的都要采用CLOB字符大对象来存储
+		Character Large OBject:CLOB
+```
+
+
+```mysql
+blob
+		二进制大对象
+		Binary Large OBject
+		专门用来存储图片、声音、视频等流媒体数据
+		往BLOB类型的字段上插入数据的时候，例如插入一个图片、视频等，
+		你需要使用IO流才行。
+```
+
+#### 表的创建
+
+```mysql
+create table 表名(
+		字段名1 数据类型, 
+		字段名2 数据类型, 
+		字段名3 数据类型)
+```
+
+表名：建议以t_ 或者 tbl_开始，可读性强，见名知意
+字段名：见名知意。
+表名和字段名都属于标识符。
+
+```mysql
+mysql> create table t_student(
+    -> no int,
+    -> name varchar(32),
+    -> sex char(1),
+    -> age int(3),
+    -> email varchar(255),
+    -> birth date);
+Query OK, 0 rows affected, 1 warning (0.02 sec)
+```
+
+#### 表的删除
+
+drop table if exists 表名
+
+```mysql
+mysql> drop table if exists t_student;
+Query OK, 0 rows affected (0.01 sec)
+```
+
+#### truncate
+
+快速删除表中数据，不可恢复，效率高
+
+```mysql
+truncate table t_student;
+```
+
+#### create
+
+表结构的修改，对字段的增删改查
+
+## DML
+
+#### insert
+
+insert into 表名(字段名1,字段名2,字段名3...) values(值1,值2,值3);
+
+mysql的日期格式：
+			%Y	年    %m   月   %d    日
+			%h	时    %i	 分    %s	秒
+
+str_to_date()将字符串转换成日期类型
+
+日期两种表示：date、varchar
+
+date是短日期：只包括年月日
+datetime是长日期：包括年月日时分秒
+
+```mysql
+mysql短日期默认格式：%Y-%m-%d
+mysql长日期默认格式：%Y-%m-%d %h:%i:%s
+```
+
+输出：自动转换成字符串（不需要手动）
+
+now函数：获取当前时间
+
+#### update
+
+update 表名 set 字段名1=值1,字段名2=值2,字段名3=值3... where 条件
+
+#### delete
+
+delete from 表名 where 条件;
+
+不写条件，整个表的内容全部删除
+
+例子：创建学生表，信息：编号、姓名、性别、年龄、邮件、生日
+
+```mysql
+mysql> create table t_student(
+    -> no int,
+    -> name varchar(32),
+    -> sex char(1),
+    -> age int(3),
+    -> email varchar(255),
+    -> birth date);
+Query OK, 0 rows affected, 1 warning (0.02 sec)
+
+mysql> show tables;
++-----------------------+
+| Tables_in_bjpowernode |
++-----------------------+
+| dept                  |
+| emp                   |
+| salgrade              |
+| t_student             |
++-----------------------+
+4 rows in set (0.00 sec)
+
+mysql>  insert into t_student(no,name,sex,age,email) values(1,'zhou','m',20,'zhoukanghua89@163.com');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> select * from t_student;
++------+------+------+------+-----------------------+-------+
+| no   | name | sex  | age  | email                 | birth |
++------+------+------+------+-----------------------+-------+
+|    1 | zhou | m    |   20 | zhoukanghua89@163.com | NULL  |
++------+------+------+------+-----------------------+-------+
+1 row in set (0.00 sec)
+
+mysql> update t_student set age = 24,birth = '1997-06-19' where no = 1;
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> select * from t_student;
++------+------+------+------+-----------------------+------------+
+| no   | name | sex  | age  | email                 | birth      |
++------+------+------+------+-----------------------+------------+
+|    1 | zhou | m    |   24 | zhoukanghua89@163.com | 1997-06-19 |
++------+------+------+------+-----------------------+------------+
+1 row in set (0.00 sec)
+```
+
+delete删除表的内容，不释放内存
+
+
+
+## 约束constraint
+
+在创建表的时候，我们可以给表中的字段加上一些约束，来保证这个表中数据的完整性、有效性！！！
+
+### 约束类型
+
+非空约束：not null
+唯一性约束: unique
+主键约束: primary key （简称PK）
+外键约束：foreign key（简称FK）
+检查约束：check（mysql不支持，oracle支持）
+
+使用在字段后加上即可
+
+#### not null
+
+约束的字段不能为空（NULL）
+
+#### unique
+
+约束的字段不可重复，可NULL
+
+联合为一个整体进行唯一性约束——**表级约束**
+
+```mysql
+create table t_vip(
+				id int,
+				name varchar(255),
+				email varchar(255),
+				unique(name,email) // 约束没有添加在列的后面，这种约束被称为表级约束
+			);
+```
+
+### 主键约束
+
+**字段上添加主键约束，主键值不可为空，不可重复，一张表只能设定一个（唯一标识，类比于身份证号）**
+
+表示符：primary key
+
+主键特征：not null + unique
+
+自增：auto_increment，从1开始自动增长
+
+```mysql
+ID int primary key auto_increment
+```
+
+自然主键：主键值是一个自然数，和业务没关系
+业务主键：主键值和业务紧密关联，例如拿银行卡账号做主键值。这就是业务主键
+
+### 外键约束
+
+**子表中的外键引用的父表中的某个字段，被引用的这个字段必须是主键吗？**
+
+**不一定是主键，但至少具有unique约束。**
+
+字段上添加外键约束，foreign key
+
+```mysql
+#先删除子表，再删除父表
+drop table if exists t_student;
+drop table if exists t_class;
+#创建父表
+create table t_class(
+	classno int primary key,
+	classname varchar(255)
+);
+#创建子表
+create table t_student(
+	no int primary key auto_increment,
+	name varchar(255),
+	cno int,
+	foreign key(cno) references t_class(classno)
+);
+#先插入父表
+insert into t_class(classno, classname) values(100, '北京市大兴区亦庄镇第二中学高三1班');
+insert into t_class(classno, classname) values(101, '北京市大兴区亦庄镇第二中学高三1班');
+#再插入子表
+insert into t_student(name,cno) values('jack', 100);
+insert into t_student(name,cno) values('lucy', 100);
+insert into t_student(name,cno) values('lilei', 100);
+insert into t_student(name,cno) values('hanmeimei', 100);
+insert into t_student(name,cno) values('zhangsan', 101);
+insert into t_student(name,cno) values('lisi', 101);
+insert into t_student(name,cno) values('wangwu', 101);
+insert into t_student(name,cno) values('zhaoliu', 101);
+
+select * from t_student;
+select * from t_class;
+```
+
+### 存储引擎
+
+建表的时候在最后指定储存引擎、以及字符编码方式
+
+```mysql
+mysql> show create table t_student;
++-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Table     | Create Table                                                                                             |
++-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| t_student | CREATE TABLE `t_student` (
+  `no` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  `cno` int(11) DEFAULT NULL,
+  PRIMARY KEY (`no`),
+  KEY `cno` (`cno`),
+  CONSTRAINT `t_student_ibfk_1` FOREIGN KEY (`cno`) REFERENCES `t_class` (`classno`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 |
++-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+1 row in set (0.00 sec)
+```
+
+ENGINE来指定存储引擎，mysql默认的存储引擎是：InnoDB
+CHARSET来指定这张表的字符编码方式，mysql默认的字符编码方式是：utf8
+
+DEFAULT：默认
+
+```mysql
+#查看MySQL支持的存储引擎
+show engines \G
+```
+
+#### MyISAM存储引擎
+
+它管理的表具有以下特征：使用三个文件表示每个表：
+		格式文件 — 存储表结构的定义（mytable.frm）
+		数据文件 — 存储表行的内容（mytable.MYD）
+		索引文件 — 存储表上索引（mytable.MYI）索引是一本书的目录，缩小扫描范围，提高查询效率的一种机制
+		可被转换为压缩、只读表来节省空间
+
+提示一下：
+		对于一张表来说，只要是主键，或者加有unique约束的字段上会自动创建索引。
+
+MyISAM存储引擎特点：
+		可被转换为压缩、只读表来节省空间
+		这是这种存储引擎的优势！！！！
+
+MyISAM不支持事务机制，安全性低。
+
+#### InnoDB存储引擎
+
+**MySQL默认的存储引擎，支持事务，支持数据库崩溃后自动恢复机制，主要特点是安全**
+
+在数据库目录种以.frm格式文件表示
+
+支持事务：保证数据安全、但效率不高，不支持压缩、不能转换为只读
+
+#### MEMORY储存引擎
+
+表数据及索引存储在内存中，查询最快，效率最高，不需要和硬盘交互，但不安全，关机后数据消失
+
+## 事务
+
+事务【transaction】：一个完整的业务逻辑，最小的工作单元，不可再分
+
+只有DML语句有事务功能，只有增删改和事务有关，同时设计到安全问题
+
+本质就是多条DML语句同时执行成功，完成一个事情
+
+### 提交事务与回滚事务
+
+**事务如何做到同时成功、同时失败的？**
+
+InnoDB存储引擎：提供一组用来记录事务性活动的日志文件
+
+事务开启，insert、insert、delete、update……，事务结束
+
+在事务的执行过程中，每一条DML语句都会记录到日志文件中，在事务的执行过程中，我们可以提交事务、也可以回滚事务，但同时都会清空日志文件
+
+- 提交事务【commit】：将数据全部持久化到数据库表中，提交事务标志事务的结束，是一种成功的结束
+- 回滚事务【rollback】：将事务中的DML操作全部撤销，回滚标志事务结束，是一种失败的结束，每一次回滚到上一次的提交点
+
+MySQL默认是自动提交事务（每一条语句执行后就会自动提交，非常不好，不利于开发）
+
+```mysql
+#开启回滚事务（关闭自动提交）
+start transaction;
+#手动提交
+commit；
+#回滚事务
+rollback；
+```
+
+提交后MySQL自动恢复到 自动提交事务，想再次使用事务，需要再次开启回滚事务
+
+### 事务特性
+
+A：原子性
+		说明事务是最小的工作单元。不可再分。
+
+C：一致性
+	所有事务要求，在同一个事务当中，所有操作必须同时成功，或者同时失败，
+	以保证数据的一致性。
+
+I：隔离性
+	A事务和B事务之间具有一定的隔离。
+	教室A和教室B之间有一道墙，这道墙就是隔离性。
+	A事务在操作一张表的时候，另一个事务B也操作这张表会那样？？？
+
+D：持久性
+	事务最终结束的一个保障。事务提交，就相当于将没有保存到硬盘上的数据
+	保存到硬盘上！
+
+#### 隔离性级别
+
+- 读未提交【read uncommitted】：没有提交就读到【脏读】，事务A可以读取到事务B未提交的数据
+- 读已提交【read committed】：事务A只能读取到事务B提交之后的数据，解决了脏读现象。这种级别的特点是不可重复读取数据，每次都是真实的数据，紧跟时事，事务B提交，事务A读取到的永远是最新的，Oracle数据库的缺省级别
+- 可重复度【repeatable read】：无论事务B是否提交数据，事务A读取到的都是刚开启事务时的数据。事务A每一次读取的数据都是相同、重复的，MySQL的缺省级别
+- 序列化/串行化【serializable】：最高级别，效率低，事务排队执行，不支持并发。synchronized，与线程同步（事务同步）相同
+
+```mysql
+#查看MySQL默认隔离级别
+mysql> select @@tx_isolation;
++-----------------+
+| @@tx_isolation  |
++-----------------+
+| REPEATABLE-READ |
++-----------------+
+1 row in set (0.00 sec)
+```
+
+设置隔离级别后，需要exit退出重进
+
+```mysql
+#测试 读未提交【read uncommitted】
+#设置全部隔离级别
+set global transaction isolation level read uncommitted;
+exit;
+#开启两个窗口
+#事务A
+mysql>  start transaction;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> insert into dept values(100,'qwsfwsd','qsad');
+Query OK, 1 row affected (0.00 sec)
+#事务B
+mysql> select * from dept;
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
++--------+------------+----------+
+4 rows in set (0.00 sec)
+
+mysql> start transaction;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> select * from dept;
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
+|    100 | qwsfwsd    | qsad     |
++--------+------------+----------+
+5 rows in set (0.00 sec)
+#事务A添加信息后，没有提交，事务B就查询到
+
+#测试读已提交【read committed】
+#只有提交后才会查询到数据更改
+```
+
+```mysql
+#测试可重复度【repeatable read】
+#事务A
+mysql> start transactiont;
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'transactiont' at line 1
+mysql> start transaction;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> insert into dept values(100,'sd','asdasda');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> select * from dept;
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
+|    100 | sd         | asdasda  |
++--------+------------+----------+
+5 rows in set (0.00 sec)
+
+mysql> commit;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> select * from dept;
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
+|    100 | sd         | asdasda  |
++--------+------------+----------+
+5 rows in set (0.00 sec)
+
+#事务B
+mysql>  start transaction;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> select * from dept;
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
++--------+------------+----------+
+4 rows in set (0.00 sec)
+#无论A如何操作，B都是获取到初始状态
+```
+
+```mysql
+#测试序列化/串行化【serializable】
+#A、B均开启事务，先运行的事务在未提交之前，另一个不得操作
+mysql> start transaction;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> use tmp;
+Database changed
+mysql> select * from dept;
++--------+------------+----------+
+| DEPTNO | DNAME      | LOC      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
++--------+------------+----------+
+4 rows in set (0.00 sec)
+
+mysql>
+
+mysql> start transaction;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> insert into dept values(1000,'swdfwe','sdf');
+ERROR 1046 (3D000): No database selected
+mysql> insert into dept values(1000,'swdfwe','fdw');
+ERROR 1046 (3D000): No database selected
+mysql> use tmp;
+Database changed
+mysql> insert into dept values(1000,'swdfwe','fdw');
+#……等待中
+```
+
+
+
+## 索引
+
+MySQL在查询方面主要就是两种方式：
+		第一种方式：全表扫描
+		第二种方式：根据索引检索
+
+索引：数据库表的字段上添加的，为了提高查询效率的一种机制，相等于目录
+
+查找时，先找到目录，在找目录下对应的章节
+
+### 实现原理
+
+1. 主键会自动添加索引对象，unique字段也会自动添加索引
+
+2. 在任何数据库当中，任何一张表的任何一条记录在硬盘存储上都有一个硬盘的物理存储编号
+
+3. 在mysql当中，索引是一个单独的对象，不同的存储引擎以不同的形式存在。在MyISAM存储引擎中，索引存储在一个.MYI文件中；在InnoDB存储引擎中索引存储在一个逻辑名称叫做tablespace的当中；在MEMORY存储引擎当中索引被存储在内存当中。
+
+   **不管索引存储在哪里，索引在mysql当中都是一个树的形式存在（自平衡二叉树：B+Tree）**
+
+```tex
+id(PK)		name	           每一行记录在硬盘上都有物理存储编号
+----------------------------------------------------------------------------------
+100		 zhangsan				0x1111
+120		 lisi				    0x2222
+99		 wangwu					0x8888
+88		 zhaoliu				0x9999
+101		 jack					0x6666
+55		 lucy					0x5555
+130		 tom				 	0x7777
+```
+
+![image-20220713211724992](C:/Users/zhouk/AppData/Roaming/Typora/typora-user-images/image-20220713211724992.png)
+
+根据ID创建一个二叉搜索树，查找时找到对应位置物理编号
+
+### 索引创建删除
+
+```mysql
+#创建索引：给emp表的ename字段添加索引，起名：emp_ename_index
+mysql> create index emp_ename_index on emp(ename);
+		
+#删除索引：将emp表上的emp_ename_index索引对象删除
+mysql> drop index emp_ename_index on emp;
+
+#查看SQL语句是否使用索引进行检索
+mysql> explain select * from emp where ename = 'KING';
+```
+
+### 索引失效
+
+1. 字符串查询时以“%”开头
+2. 使用or时：两个字段只有一个有索引
+3. 复合索引：两个字段联合添加索引。查找时没有使用左侧的列进行查找
+4. 进行运算：where中索引列进行运算
+5. 函数：where中索引列使用函数
+6. ……
+
+### 索引分类
+
+```tex
+单一索引：一个字段上添加索引
+复合索引：两个字段或者更多的字段上添加索引
+主键索引：主键上添加索引
+唯一性索引：具有unique约束的字段上添加索引
+.....
+注意：唯一性比较弱的字段上添加索引用处不大
+```
+
+
+
+## 视图
+
+view：站在不同的角度去看待同一份数据。
+
+```mysql
+#创建视图对象
+create view view_name as DQL;
+create view dept_name as select * from dept;
+#删除视图对象
+drop view view_name;
+#查询视图对象
+select * from view_name;
+#面向视图更新【原表数据更新】
+update view_name set loc = 'asdfsd' where deptno = 10;
+```
+
+视图对应的语句只能是DQL语句
+
+但是视图对象创建完成之后，可以对视图进行增删改查等操作【CRUD】
+
+C:Create（增）、R:Retrive（查：检索）、U:Update（改）、D:Delete（删）
+
+#### 视图作用
+
+视图是虚拟的表，与包含数据的表不一样，它允许用户看到或者(有时)更新特定部分的数据。主要用途是简化复杂的SQL操作，隐藏具体的细节，保护原表的数据，创建视图后，可以使用与原表相同的方式利用他们。很少用视图去修改数据，一般禁止。
+
+好处：加强了安全性、用户只能看到视图所显示的数据、简化数据访问操作、可以访问远程数据源。
+
+
+
+## 数据库三范式
+
+### 第一范式
+
+最核心、最重要的范式。**必须有主键，并且每一个字段都是原子性不可再分**
+
+```mysql
+学生编号 学生姓名 联系方式
+------------------------------------------
+1001		张三		zs@gmail.com,1359999999
+1002		李四		ls@gmail.com,13699999999
+1001		王五		ww@163.net,13488888888
+```
+
+以上是学生表，满足第一范式吗？
+
+不满足，第一：没有主键。第二：联系方式可以分为邮箱地址和电话
+
+```mysql
+学生编号(pk) 学生姓名	邮箱地址			联系电话
+---------------------------------------------------
+1001		张三		zs@gmail.com	1359999999
+1002		李四		ls@gmail.com	13699999999
+1003		王五		ww@163.net		13488888888
+```
+
+### 第二范式
+
+建立在第一范式的基础之上，要求所有非主键字段必须完全依赖主键，不要产生部分依赖
+
+```mysql
+学生编号 学生姓名 教师编号 教师姓名
+----------------------------------------------------
+1001	张三		001		王老师
+1002	李四		002		赵老师
+1003	王五		001		王老师
+1001	张三		002		赵老师
+```
+
+这张表描述了学生和老师的关系：（1个学生可能有多个老师，1个老师有多个学生）【多对多的关系】
+
+不满足第一范式：没有主键
+
+学生编号、教师编号联合做主键
+
+```mysql
+学生编号+教师编号(pk)		学生姓名  教师姓名
+----------------------------------------------------
+1001			001				张三			王老师
+1002			002				李四			赵老师
+1003			001				王五			王老师
+1001			002				张三			赵老师
+```
+
+不满足第二范式：“张三”依赖1001，“王老师”依赖001，显然产生了部分依赖
+
+修改：多张表设计
+
+```mysql
+学生表
+学生编号(pk)		学生名字
+------------------------------------
+1001				张三
+1002				李四
+1003				王五
+		
+教师表
+教师编号(pk)		教师姓名
+--------------------------------------
+001					王老师
+002					赵老师
+
+学生教师关系表
+id(pk)			学生编号(fk)			教师编号(fk)
+------------------------------------------------------
+1					1001					001
+2					1002					002
+3					1003					001
+4					1001					002
+```
+
+**多对多，三张表，关系表两个外键！**
+
+### 第三范式
+
+非主键字段不能相互依赖
+
+**一对多，两张表，多的表加外键！！**
+
+### 总结
+
+**多对多，三张表，关系表两个外键！**
+
+**一对多，两张表，多的表加外键！！**
+
+**一对一，外键唯一**
+
+```mysql
+t_user
+id		login_name		login_pwd		real_name	  email		 address......
+------------------------------------------------------------------------------
+1		zhangsan		123				张三			zhangsan@xxx
+2		lisi			123				李四			lisi@xxx
+```
+
+拆表
+
+第二张表的后面加一个外键唯一性约束
+
+```mysql
+id(pk)		real_name		email			address......	login_id(fk+unique)
+------------------------------------------------------------------------------------
+100			张三			zhangsan@xxx							1
+200			李四			lisi@xxx								2
+```
+
+## 锁
+
+加锁后，整个实例处于只读状态，DML、DDL语句、已经更新的事务提交语句都会被阻塞
+
+### 1.全局锁
+
+锁住数据库中的所有表，所有表全部处于只读状态
+
+典型使用场景：对所有表进行锁定，获得一致性视图，保证数据的完整性，主要应用于数据备份
+
+```mysql
+Flush tables with read lock (FTWRL)
+```
+
+### 2.表级锁
+
+每次操作锁住整张表
+
+#### 表锁
+
+1. 读锁：当前客户端加了读锁，当前客户端与其他客户端都可读数据，但不可写数据
+2. 写锁：当前客户端可读写数据，其他客户端处于阻塞状态，直到当前客户端解锁
+
+```mysql
+lock tables table_name read;
+lock tables table_name write;
+unlock tables;
+```
+
+#### 元数据锁（meta data lock，MDL）
+
+访问一个表的时候自动加锁
+
+作用：保证读写的正确性
+
+1. 增删改查：加MDL读锁
+2. 结构变更：加MDL写锁
+
+读锁之间不互斥，多个线程可以同时对一张表进行增删改查
+
+读写锁、写锁之间互斥，保证变更表结构的安全性
+
+事务中的MDL锁，在语句开始时申请，但是语句结束后不会立马释放，等整个事务提交后再释放
+
+解决DML、DDL冲突问题
+
+#### 意向锁【底层操作】
+
+给更大一级别的空间示意里面已经上过所
+
+比如当给某一行数据加上排他锁，数据库会自动加上意向锁，告诉其他想要访问这个数据表的线程，已经有线程上过排他锁了，需要等待当前线程操作完毕
+
+### 3.行级锁
+
+每次操作锁住对应的行数据，粒度最小，发生锁冲突的概率最低，并发度最高，应用在InnoDB存储引擎中
+
+什么时候释放？等事务提交后释放
+
+InnoDB实现了两种行级锁：共享锁、排他锁
+
+#### 共享锁【读锁、死锁、S锁】
+
+其他用户可以读取，但不能修改
+
+select时候，加上共享锁，当读取完毕后，释放共享资源
+
+#### 排他锁【写锁、X锁】
+
+只有当前线程可对这块数据进行操作，其他线程无法增删改查
+
+当进行增删改时候，会自动加排他锁
+
+InnoDB的行锁针对索引项，不通过索引项检索数据的话，会对整个表加锁，此时升级为表锁
+
+
+
+
+

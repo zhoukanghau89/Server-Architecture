@@ -1,0 +1,527 @@
+# 进程
+
+前言
+
+fork是什么，fork出来的如何管理CPU？
+
+操作地址为什么可以使用内存，如何做到的？
+
+
+
+CPU的工作原理 取指执行
+
+```assembly
+50:mov ax,[100]
+51:mov bx,[101]
+52:add ax,bx
+...
+100:0
+101:1
+```
+
+
+
+管理CPU最直观的方法 设好PC的初值
+
+提高CPU利用率 交替执行多个程序——并发
+
+切换程序时，要保存现场
+
+引入进程，执行中的程序，让CPU执行多个进程
+
+<img src="C:/Users/zhouk/AppData/Roaming/Typora/typora-user-images/image-20220627161946677.png" alt="image-20220627161946677" style="zoom: 50%;" />
+
+## 多进程图像
+
+操作系统需要将这些进程记录好，按照合理的次序推进【分配资源、任务调度】
+
+### 多进程如何组织? 
+
+**PCB + 状态 + 队列**
+
+PCB【Process Control Block】进程控制块，是操作系统用来感知进程的重要数据结构
+
+进程状态图
+
+新建态、就绪态、运行态、阻塞态、运行态、终止态
+
+阻塞态是对磁盘的操作【对磁盘的操作非常慢】
+
+操作系统组织多个进程，利用PCB将进程放到不同的队列中，用状态转移推进。
+
+
+
+### 多进程如何交替? 
+
+**队列操作 + 进程调度 + 切换**
+
+FIFO 最基本的进程调度方法
+
+priority 优先级
+
+举个例子
+
+```c
+//队列操作
+#当前进程启动磁盘读写；
+pCur.state = 'W';  // 将当前进程状态改为阻塞
+#将pCur放到DiskWaitQueue【阻塞队列中】; // 加入到阻塞队列中
+schedule();
+
+// 进程调度
+schedule() {
+    pNew = getnext(ReadyQueue); // 从就绪队列获取一个进程
+    switch_to(pCur, pNew);      // 跳转到新的进程执行
+}
+// 切换
+switch_to(pCur, pNew) {
+    pCur.ax = CPU.ax;
+    pCur.bx = CPU.bx;
+    pCur.cs = CPU.cs;
+    pCur.retpc = CPU.pc;
+    
+    CPU.ax = pNew.ax;
+    CPU.bx = pNew.bx;
+    CPU.cs = pNew.cs;
+    CPU.retpc = pNew.pc;
+}
+```
+
+**多个进程在内存中同时存在对内存会有影响吗？**
+
+进程带动内存的使用
+
+每一个进程中的地址可能会看似相同，实际上每一个进程都有一个**进程映射表**，不同进程中即使相同的地址映射后在物理内存中的地址也不会相同
+
+```shell
+进程1 100 映射表 780
+进程2 100 映射表 1200
+```
+
+**多进程如何合作？**
+
+前提：**进程同步**
+
+
+
+### 用户级线程
+
+引言
+
+进程的切换分为：指令的切换、映射表资源的切换【分治的思想】
+
+指令的切换——线程的切换
+
+实质：映射表不变，仅改变PC指针
+
+例子：浏览器网页 多线程交替执行 共享资源
+
+#### 线程底层切换
+
+每一个线程有一个单独的数据结构TCB【Thread Control Block】，记录线程运行时的各种信息
+
+另外，每一个线程有一个单独的栈，存放程序调用时的返回地址
+
+为什么需要单独的栈？保证每个线程的函数调用和返回时，不会受到其他的函数或者线程的影响
+
+实现：用户级线程的切换就是在切换的位置上调用**yield**函数。yield函数，保存和恢复现场【寄存器的值】，找到下一个线程的TCB，切换到新栈以后利用yield函数的返回“}”将PC指针切换到下一个线程要执行的指令处。
+
+```assembly
+//线程1
+100:A() {
+	B();
+	104;
+}
+200:B() {
+	yield();  //跳到D中的yield
+	204;
+}
+//栈:104
+//	 204
+//线程2
+300:C() {
+	D();
+	304;
+}
+400:D() {
+	yield();  //执行完后返回到B中的yield的下一句
+	404;
+}
+//栈:304
+//   404
+```
+
+
+
+### 内核级线程Kernel Threads
+
+进程切换的实质是内核级线程的切换
+
+并发：同时触发交替执行，共用一套资源
+
+并行：同时触发同时执行，共用一套资源
+
+内核级线程必须进入内核完成切换，进入内核必须通过中断
+
+引起中断：系统调用……
+
+#### 内核级线程的切换五段论
+
+- 中断入口程序。中断进入，将程序的CS、IP，用户栈的SS、SP，标志寄存器压入栈【push】。记录当前程序在用户态执行的信息，当前使用的用户栈、当前程序执行位置、当前执行的现场信信息。
+- 中断处理程序。调用shcedule函数，引起TCB切换。在调用shcedule函数之前将当前的线程的状态修改为阻塞。schedule函数将就绪队列中选取出下一个要执行线程的TCB，找到TCB之后，用next指针指向这个TCB。
+- 内核栈切换。将当前的ESP寄存器存放在current指向的TCB中（切换内核栈之前保留栈的现场），再从next指向的TCB取出esp，赋值给ESP，寄存器。
+- 中断返回。IRET指令【弹出IP、CS、标志寄存器】，从内核栈中弹出相关寄存器【pop】
+- 用户栈切换。将内核栈存放的五个信息弹出赋给寄存器
+
+从一套栈到另一套栈的切换，从内核栈从用户栈的切换
+
+<img src="C:/Users/zhouk/AppData/Roaming/Typora/typora-user-images/image-20220623151800281.png" alt="image-20220623151800281" style="zoom: 50%;" />
+
+#### fork中断理解切换五段论
+
+```assembly
+fork();
+mov %eax,_NR_fork()
+INT 0x80
+mov res,%eax
+```
+
+1. 进入内核、退出内核
+
+fork()中有中断，执行 INT 0x80时，CPU找到对应的内核栈，将 SS SP PC CS 压栈；接着执行_system_call
+
+刚进入内核，_system_call将用户态信息压栈，这就是中断入口—建立内核栈和用户栈的关联
+
+```assembly
+# system_call.s 程序
+movl _current,%eax # 取当前任务（进程）数据结构地址%eax。
+# 下面查看当前任务的运行状态。如果不在就绪状态(state不等于0)就去执行调度程序。
+# 如果该任务在就绪状态但counter[??]值等于0，则也去执行调度程序。
+cmpl $0,state(%eax) # state state(%eax)= state + %eax，eax = _current，_current = PCB，其实就是判断PCB是否是0,0表示就绪或执行,非0表示阻塞
+jne reschedule # 如果是非0 阻塞，就会发生调度
+cmpl $0,counter(%eax) # 判断counter(%eax)是否是0,eax = _current，counter是时间片
+je reschedule # 如果时间片与eax相等，调度
+ret_from_sys_call: # 中断返回，执行中断返回函数，从内核栈，切换到用户栈
+```
+
+总结：进入内核后，判断阻塞 或者 时间片，若阻塞 或者 时间片用光 的话就重新调度。
+
+2. schedule
+
+TSS【Task Struct Segment】任务结构段
+
+TR【Task Selector】寄存器选择子【指向TSS的文件描述符，理解成指针】
+
+switch_to通过TSS实现切换，将当前CPU寄存器信息写入到当前线程的TSS中，TR通过全局描述符表【GDT，Global Descriptor Table】指向新的TSS，将新的TSS段内容中所有寄存器信息（包括ESP）覆盖进 CPU。
+
+理解成拍了个快照
+
+```c
+void schedule (void)
+{
+    //找到下一个线程的TCB next，切换到下一个线程……
+    switch_to (next);   // 切换到任务号为next 的任务，并运行之
+}
+```
+
+3. sys_fork()详解
+
+根据父进程，创建子进程，copy_process前将参数压栈，这些参数是父进程在用户态的样子
+
+```assembly
+_sys_fork:
+……
+push %gs
+pushl %esi
+pushl %edi
+pushl %ebp
+pushl %eax
+call _copy_process # 调用C 函数copy_process()(kernel/fork.c)
+……
+```
+
+```assembly
+_copy_process
+//申请PCB内存
+p = (struct task_struct*)get_free_page();
+//申请内存空间
+p->tss.esp0 = PAGE_SIGE + (long)p;
+p->tss.ss0 = 0x10; //0x10内核数据段
+//创建内核栈
+p->tss.esp = esp;  //esp是用户栈 父子进程
+p->tss.ss = ss & 0xffff;
+copy_mem(nr,p);
+```
+
+<img src="C:/Users/zhouk/AppData/Roaming/Typora/typora-user-images/image-20220623201111506.png" alt="image-20220623201111506" style="zoom: 50%;" />
+
+```assembly
+p->tss.eip = eip; // 指令代码指针
+p->tss.eax = 0;
+p->tss.es = es & 0xffff; // 段寄存器仅16位有效
+p->tss.cs = cs & 0xffff;
+p->tss.ss = ss & 0xffff;
+p->tss.ds = ds & 0xffff;
+p->tss.fs = fs & 0xffff;
+p->tss.gs = gs & 0xffff;
+```
+
+INT0x80结束后执行mov res,%eax
+
+子进程的eax = 0【p->tss.eax = 0】，父进程的eax != 0【eax = current，current = PCB】，父子进程各自运行独立的程序
+
+<img src="C:/Users/zhouk/AppData/Roaming/Typora/typora-user-images/image-20220623205343234.png" alt="image-20220623205343234" style="zoom: 50%;" />
+
+举个例子
+
+```assembly
+int main(int argc, char * argv[])
+{
+    while(1)
+    {
+        scanf("%s", cmd);
+        if(!fork())
+        {
+            exec(smd); // exec()是一个系统调用，会执行 system_call，执行子进程命令
+        }
+        wait(0); // 执行父进程命令，shell等待用户输入
+    }
+}
+_system_call:
+    push %ds ... %fs
+    pushl %edx...
+    call sys_execve
+
+_sys_execve:
+    lea EIP(%esp),%eax  
+    pushl %eax
+    call _do_execve
+```
+
+##### system_call的作用总结：
+
+1. 调用sys_fork，调用 copy_process，父进程与子进程 内核栈不同，用户栈相同
+2. 判断cmpl $0,state(%eax)，非0表示阻塞，调用 reschedule 进程调度，reschedule调用 schedule，进而调用 switch_to（switch_to中ljmp实现长跳转，子进程将 TSS的内容复制到 CPU上，TSS图中粉色的部分）
+3. iret 内核栈出栈
+4. 子进程回到用户栈，执行的是 中断下边的一句代码：mov res, %eax ，res = %eax = 0
+5. 父进程回到用户栈，执行的也是 中断下边的一句代码：mov res, %eax，父进程 eax != 0
+
+
+
+### CPU调度
+
+任务的周转时间：任务从新建到任务结束的时间
+
+任务的响应时间：从操作发生到响应的时间
+
+系统吞吐量：系统在一段时间的任务量
+
+IO约束型任务：一般为前台任务，关注响应时间
+
+CPU约束型任务：一般为后台任务，关注周转时间
+
+**两个矛盾的点：**
+
+​		响应时间少——切换次数多——系统内耗大——吞吐量小
+
+​    	周转时间少——切换次数少——某些任务很久得不到响应——用户体验差
+
+counter两个作用：时间片、优先级
+
+counter可以动态调整
+
+**Linux0.11 schedule调度函数主要源码分析**
+
+```c
+ 1	#define NR_TASKS 64
+ 2	#define HZ 100
+ 12 void schedule(void)
+ 13 {
+ 14     int i,next,c;
+ 15     struct task_struct ** p;
+ 16
+ 17 /* check alarm, wake up any interruptible tasks that have got a signal */
+ 18
+ 19     for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
+ 20         if (*p) {
+ 21             if ((*p)->alarm && (*p)->alarm < jiffies) {
+ 22                     (*p)->signal |= (1<<(SIGALRM-1));
+ 23                     (*p)->alarm = 0;
+ 24                 }
+ 25             if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
+ 26             (*p)->state==TASK_INTERRUPTIBLE)
+ 27                 (*p)->state=TASK_RUNNING;
+ 28         }
+ 29
+ 30 /* this is the scheduler proper: */
+ 31
+ 32     while (1) {
+ 33         c = -1;
+ 34         next = 0;
+ 35         i = NR_TASKS;
+ 36         p = &task[NR_TASKS];
+ 37         while (--i) { //找到当前任务中处于就绪状态，且时间片最高的任务
+ 38             if (!*--p)
+ 39                 continue;
+ 40             if ((*p)->state == TASK_RUNNING && (*p)->counter > c)
+ 41                 c = (*p)->counter, next = i;
+ 42         }
+ 43         if (c) break; //找到则跳出循环
+ 44         for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
+ 45             if (*p) //跳过不存在的任务
+ 46                 (*p)->counter = ((*p)->counter >> 1) + (*p)->priority;
+ 47             //找不到为所有的任务重新分配时间片，当前时间片除以2 再加上优先级
+ 48    			//c1 = pro; c2 = pro + pro/2; c3 = pro + pro/2 + pro/4;[收敛级数]…;c < 2p
+ 49				//越往后的时间片就越高，当阻塞【非就绪的】回来后就会优先执行
+ 50     }
+ 51     switch_to(next);
+ 52 }
+```
+
+
+
+### 多进程同步与信号量
+
+临界区保护信号量，信号量实现同步
+
+
+
+#### 进程与线程的区别总结
+
+根本区别：进程是操作系统资源分配的基本单位，而线程是处理器任务调度和执行的基本单位
+
+资源开销：每个进程都有独立的代码和数据空间（程序上下文），程序之间的切换会有较大的开销；线程可以看做轻量级的进程，同一类线程共享代码和数据空间，每个线程都有自己独立的运行栈和程序计数器（PC），线程之间切换的开销小。
+
+包含关系：如果一个进程内有多个线程，则执行过程不是一条线的，而是多条线（线程）共同完成的；线程是进程的一部分，所以线程也被称为轻权进程或者轻量级进程。
+
+内存分配：同一进程的线程共享本进程的地址空间和资源，而进程之间的地址空间和资源是相互独立的
+
+影响关系：一个进程崩溃后，在保护模式下不会对其他进程产生影响，但是一个线程崩溃整个进程都死掉。所以多进程要比多线程健壮。
+
+执行过程：每个独立的进程有程序运行的入口、顺序执行序列和程序出口。但是线程不能独立执行，必须依存在应用程序中，由应用程序提供多个线程执行控制，两者均可并发执行
+
+#### 并行和并发
+
+并发是指宏观上在一段时间内能同时运行多个程序，微观上是序列化处理的。并发性是指同时处理多个活动的能力。并发一般都是三个步骤：排队等候、唤醒和执行。
+
+并行则指同一时刻能运行多个指令。
+
+引入多线程：
+
+并行需要两个或两个以上的线程跑在不同的处理器上，并发可以跑在一个处理器上通过时间片进行切换。
+
+#### 进程间通信方法
+
+- 管道：字节流单向的
+- 消息队列：对进程单向双向都可以
+- 信号量
+- 共享内存
+- 套接字
+- 信号
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
